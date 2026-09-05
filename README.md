@@ -54,4 +54,4 @@ To see the per-kernel step budget: `bench/profile_step.sh <port> <container>` re
 
 ## License
 
-MIT. The patch applies to SGLang, which is Apache-2.0.
+Apache-2.0, the same license as SGLang.
