@@ -35,7 +35,7 @@ Then start the server as before. `--fp4-gemm-backend auto` now selects b12x on S
 
 The patch is against SGLang `main` at `77aee202` (2026-09-05). The measurements used the image `lmsysorg/sglang@sha256:616a3e97f45191af975896cfa644279096cb31bd408a071c2e99ca7209c3cafe`, where the same two-line change applies.
 
-## FP8 draft, a second 4%
+## FP8 draft: a second 4% on the step, not on code
 
 The DFlash2 draft reads 3.85 GB of bf16 weights per step. [thomasgardiner/Qwen3.8-27B-DFlash2-FP8](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) stores the draft's MLP and o_proj tensors in FP8 with one scale per tensor and leaves q, k, v in bf16 so SGLang keeps its fused DFlash KV path. Step time from the server log on the same greedy prompts, on top of b12x:
 
@@ -45,7 +45,17 @@ The DFlash2 draft reads 3.85 GB of bf16 weights per step. [thomasgardiner/Qwen3.
 | FP8 per-channel | 3.87 | 19.37 |
 | FP8 per-tensor | 3.99 | 18.31 |
 
-Per-channel scales route to a CUTLASS FP8 GEMM at 25 to 60% of bandwidth on SM120. A per-tensor scale routes to cuBLAS at 86%. Quantizing q, k, v turns the fused KV path off and is slower. `bench/quant_draft.py` builds the checkpoint; receipts in `receipts/`.
+Per-channel scales route to a CUTLASS FP8 GEMM at 25 to 60% of bandwidth on SM120. A per-tensor scale routes to cuBLAS at 86%. Quantizing q, k, v turns the fused KV path off and is slower.
+
+The shorter step is not the whole story. Five prompts per category, greedy, 1200 tokens, mean tok/s and mean accept (`receipts/probe-*.json`):
+
+| category | bf16 draft | FP8 draft | bf16 accept | FP8 accept |
+| --- | ---: | ---: | ---: | ---: |
+| prose | 151.6 | 174.2 | 2.83 | 2.92 |
+| math | 287.5 | 300.3 | 5.40 | 5.54 |
+| code | 204.2 | 196.2 | 3.84 | 3.52 |
+
+The FP8 draft accepts 8% fewer tokens on code and ends up 4% slower there. Use it for prose and math traffic; keep the bf16 draft for code. `bench/quant_draft.py` builds the checkpoint.
 
 Point `--speculative-draft-model-path` at the Hugging Face repo and do not pass `--speculative-draft-model-quantization`.
 

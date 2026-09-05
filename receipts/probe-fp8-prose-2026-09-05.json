@@ -1,0 +1,37 @@
+[
+ {
+  "i": 0,
+  "completion": 1200,
+  "decode_tok_s": 199.8,
+  "accept": 3.01,
+  "step_ms": 18.24
+ },
+ {
+  "i": 1,
+  "completion": 1167,
+  "decode_tok_s": 154.2,
+  "accept": 3.27,
+  "step_ms": 21.82
+ },
+ {
+  "i": 2,
+  "completion": 1161,
+  "decode_tok_s": 156.2,
+  "accept": 2.82,
+  "step_ms": 22.12
+ },
+ {
+  "i": 3,
+  "completion": 1200,
+  "decode_tok_s": 160.5,
+  "accept": 2.96,
+  "step_ms": 22.14
+ },
+ {
+  "i": 4,
+  "completion": 586,
+  "decode_tok_s": 200.1,
+  "accept": 2.55,
+  "step_ms": 27.99
+ }
+]
