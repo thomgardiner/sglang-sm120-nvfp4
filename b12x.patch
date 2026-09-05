@@ -1,0 +1,29 @@
+--- a/python/sglang/srt/layers/quantization/fp4_utils.py	2026-08-22 03:11:35.000000000 +0000
++++ b/python/sglang/srt/layers/quantization/fp4_utils.py	2026-09-05 21:14:24.506192116 +0000
+@@ -98,6 +98,7 @@
+     FLASHINFER_CUTEDSL = "flashinfer_cutedsl"
+     FLASHINFER_CUTLASS = "flashinfer_cutlass"
+     FLASHINFER_TRTLLM = "flashinfer_trtllm"
++    FLASHINFER_B12X = "flashinfer_b12x"
+     MARLIN = "marlin"
+ 
+     def is_auto(self) -> bool:
+@@ -152,6 +153,8 @@
+             backend = "flashinfer_cutedsl"
+         elif is_cuda() and (10, 0) > get_device_capability() >= (8, 0):
+             backend = "marlin"
++        elif is_cuda() and get_device_capability()[0] == 12:
++            backend = "flashinfer_b12x"
+         else:
+             backend = "flashinfer_cutlass"
+ 
+--- a/python/sglang/srt/server_args.py	2026-08-22 03:11:36.000000000 +0000
++++ b/python/sglang/srt/server_args.py	2026-09-05 21:23:06.668503237 +0000
+@@ -310,6 +310,7 @@
+     "flashinfer_cutlass",
+     "flashinfer_trtllm",
+     "marlin",
++    "flashinfer_b12x",
+ ]
+ 
+ BF16_GEMM_BACKEND_CHOICES = ["auto", "cutedsl", "gemv", "torch"]
