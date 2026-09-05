@@ -1,6 +1,6 @@
 set -u
 H="Authorization: Bearer ${SGLANG_API_KEY:-}"
-P=${1:-30000}; C=${2:-sglang-qwen0}
+P=${1:?port}; C=${2:?container}
 docker exec ${C} sh -c 'rm -f /tmp/*.trace.json.gz /tmp/*.trace.json 2>/dev/null; ls /tmp'
 curl -s -X POST -H "$H" -H 'Content-Type: application/json' http://127.0.0.1:$P/start_profile -d '{"num_steps": 40, "activities": ["CPU","GPU"], "profile_by_stage": false}'; echo
 python3 - "$P" <<'PY'
