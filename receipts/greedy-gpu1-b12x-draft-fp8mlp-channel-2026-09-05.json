@@ -1,0 +1,56 @@
+[
+ {
+  "prompt": "mill",
+  "completion": 980,
+  "sha": "43046b4a2fbfd065",
+  "ttft_s": 0.136,
+  "decode_s": 5.281,
+  "decode_tok_s": 185.6,
+  "rep": 0
+ },
+ {
+  "prompt": "math",
+  "completion": 1200,
+  "sha": "84d22a8a332d3c77",
+  "ttft_s": 0.104,
+  "decode_s": 4.488,
+  "decode_tok_s": 267.4,
+  "rep": 0
+ },
+ {
+  "prompt": "code",
+  "completion": 1200,
+  "sha": "2081b059f7419d91",
+  "ttft_s": 0.088,
+  "decode_s": 6.782,
+  "decode_tok_s": 176.9,
+  "rep": 0
+ },
+ {
+  "prompt": "mill",
+  "completion": 980,
+  "sha": "43046b4a2fbfd065",
+  "ttft_s": 0.084,
+  "decode_s": 5.287,
+  "decode_tok_s": 185.4,
+  "rep": 1
+ },
+ {
+  "prompt": "math",
+  "completion": 1200,
+  "sha": "84d22a8a332d3c77",
+  "ttft_s": 0.084,
+  "decode_s": 4.504,
+  "decode_tok_s": 266.4,
+  "rep": 1
+ },
+ {
+  "prompt": "code",
+  "completion": 1200,
+  "sha": "2081b059f7419d91",
+  "ttft_s": 0.084,
+  "decode_s": 6.791,
+  "decode_tok_s": 176.7,
+  "rep": 1
+ }
+]

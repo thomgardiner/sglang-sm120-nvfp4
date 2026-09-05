@@ -35,6 +35,20 @@ Then start the server as before. `--fp4-gemm-backend auto` now selects b12x on S
 
 The patch is against SGLang `main` at `77aee202` (2026-09-05). The measurements used the image `lmsysorg/sglang@sha256:616a3e97f45191af975896cfa644279096cb31bd408a071c2e99ca7209c3cafe`, where the same two-line change applies.
 
+## FP8 draft, a second 4%
+
+The DFlash2 draft reads 3.85 GB of bf16 weights per step. [thomasgardiner/Qwen3.8-27B-DFlash2-FP8](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) stores the draft's MLP and o_proj tensors in FP8 with one scale per tensor and leaves q, k, v in bf16 so SGLang keeps its fused DFlash KV path. Step time from the server log on the same greedy prompts, on top of b12x:
+
+| draft | mean accept | step (ms) |
+| --- | ---: | ---: |
+| bf16 | 4.01 | 19.10 |
+| FP8 per-channel | 3.87 | 19.37 |
+| FP8 per-tensor | 3.99 | 18.31 |
+
+Per-channel scales route to a CUTLASS FP8 GEMM at 25 to 60% of bandwidth on SM120. A per-tensor scale routes to cuBLAS at 86%. Quantizing q, k, v turns the fused KV path off and is slower. `bench/quant_draft.py` builds the checkpoint; receipts in `receipts/`.
+
+Point `--speculative-draft-model-path` at the Hugging Face repo and do not pass `--speculative-draft-model-quantization`.
+
 ## Limits
 
 FlashInfer's b12x requires CUDA 13 or later and NVFP4 with the 128x4 scale layout. It does not cover MXFP4. FlashInfer excludes SM121 (GB10, DGX Spark) from b12x on purpose, so this patch changes nothing there.
