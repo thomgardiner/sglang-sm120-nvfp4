@@ -1,0 +1,20 @@
+{
+ "tag": "radixark",
+ "n": 164,
+ "passed": 153,
+ "pass_at_1": 0.9329268292682927,
+ "failed": [
+  "HumanEval/32",
+  "HumanEval/40",
+  "HumanEval/62",
+  "HumanEval/67",
+  "HumanEval/115",
+  "HumanEval/116",
+  "HumanEval/129",
+  "HumanEval/130",
+  "HumanEval/140",
+  "HumanEval/145",
+  "HumanEval/147"
+ ],
+ "samples_file": "/home/thomas/scratch/lmeval/nothink-radixark/qwen3.8-27b/samples_humaneval_instruct_2026-09-06T05-39-07.299699.jsonl"
+}

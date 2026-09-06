@@ -1,0 +1,21 @@
+{
+ "tag": "nvfp4all",
+ "n": 164,
+ "passed": 152,
+ "pass_at_1": 0.926829268292683,
+ "failed": [
+  "HumanEval/38",
+  "HumanEval/62",
+  "HumanEval/91",
+  "HumanEval/109",
+  "HumanEval/110",
+  "HumanEval/116",
+  "HumanEval/129",
+  "HumanEval/130",
+  "HumanEval/132",
+  "HumanEval/140",
+  "HumanEval/145",
+  "HumanEval/147"
+ ],
+ "samples_file": "/home/thomas/scratch/lmeval/nothink-nvfp4all/qwen3.8-27b/samples_humaneval_instruct_2026-09-06T05-28-20.694033.jsonl"
+}

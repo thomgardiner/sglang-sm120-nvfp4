@@ -38,7 +38,7 @@ Upstream: [sgl-project/sglang#38170](https://github.com/sgl-project/sglang/pull/
 
 ## The two checkpoints
 
-The target export from RadixArk leaves 6.7 GB of GDN and attention projections in FP8. `bench/nvfp4_convert.py` re-quantizes them to NVFP4 from the bf16 source, reusing the export's activation calibration. GSM8K 87% → 88%, MATH-500 62% → 64%, acceptance within 2%.
+The target export from RadixArk leaves 6.7 GB of GDN and attention projections in FP8. `bench/nvfp4_convert.py` re-quantizes them to NVFP4 from the bf16 source, reusing the export's activation calibration. GSM8K, MATH-500, GPQA Diamond, IFEval, and HumanEval all land within one standard error of the RadixArk export (lm-evaluation-harness, thinking off), acceptance within 2%.
 
 The DFlash2 draft is 3.85 GB of bf16. `bench/quant_draft.py` puts its MLP and o_proj in FP8 and leaves q/k/v alone so SGLang's fused KV path stays on. Acceptance within 1.3% on MT-Bench, HumanEval, GSM8K, MATH-500.
 

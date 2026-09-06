@@ -55,15 +55,25 @@ The cutlass backend does not change acceptance; it changes step time only. Its d
 
 ## Accuracy, lm-evaluation-harness
 
-GSM8K test, first 500, zero-shot chat, greedy, `max_gen_toks` 4096, flexible-extract exact match. Both targets served by SGLang with b12x and the bf16 DFlash2 draft. Output in `receipts/lmeval/`.
+Both targets served by SGLang with b12x and the bf16 DFlash2 draft, one target per GPU, thinking disabled through `--default-chat-template-kwargs '{"enable_thinking": false}'`, greedy, 8 concurrent requests, zero-shot chat. `max_gen_toks` 4096, 2048 for IFEval and HumanEval. Output in `receipts/lmeval/nothink-*/`.
 
-| target | GSM8K |
-| --- | ---: |
-| RadixArk/Qwen3.8-27B-NVFP4 | 83.0 ± 1.7 |
-| Qwen3.8-27B-NVFP4-all | 85.2 ± 1.6 |
+| Benchmark | Metric | RadixArk/Qwen3.8-27B-NVFP4 | Qwen3.8-27B-NVFP4-all |
+| --- | --- | ---: | ---: |
+| GSM8K (1319) | exact match, flexible-extract | 85.90 ± 0.96 | 85.82 ± 0.96 |
+| MATH-500 | math_verify | 86.00 ± 1.55 | 84.80 ± 1.61 |
+| GPQA Diamond (198) | CoT zero-shot, exact match | 68.18 ± 3.32 | 67.68 ± 3.33 |
+| IFEval (541) | prompt-level strict | 79.30 ± 1.74 | 80.96 ± 1.69 |
+| IFEval (541) | prompt-level loose | 83.55 ± 1.60 | 84.47 ± 1.56 |
+| HumanEval (164) | pass@1, executed | 93.29 (153/164) | 92.68 (152/164) |
+
+Every difference is inside one standard error. Two harness traps, both visible in the receipts:
+
+- With thinking on, the model spends its budget in `reasoning_content`, which the harness never reads. MATH-500 scored 49% with a median answer length of 29 characters. Thinking off is the only honest way to run this model through `local-chat-completions`.
+- `humaneval_instruct` assumes the prompt ends inside an open code fence and stops on `\ndef`. A chat model opens its own fence, so the built-in filter scores 0. `bench/he_grade.py` takes the longest fenced block from each sample, appends the task's `test` and `check(entry_point)`, and runs it with a 15 s timeout. `humaneval_executed.json` holds the failed task ids.
+
+Earlier thinking-on run, GSM8K first 500, one request at a time: 83.0 ± 1.7 (RadixArk) and 85.2 ± 1.6 (all-NVFP4).
 
 ```
-lm_eval --model local-chat-completions \
-  --model_args model=qwen3.8-27b,base_url=http://127.0.0.1:30000/v1/chat/completions,num_concurrent=1,tokenized_requests=False,max_gen_toks=4096 \
-  --tasks gsm8k --num_fewshot 0 --limit 500 --apply_chat_template --gen_kwargs temperature=0
+bench/eval_suite.sh 0 nvfp4all     # GPU 0: stop the service, serve the eval spec, run five tasks, grade HumanEval
+bench/eval_suite.sh 1 radixark     # GPU 1, same, other target
 ```
