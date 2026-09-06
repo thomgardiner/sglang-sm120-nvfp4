@@ -1,0 +1,101 @@
+{
+ "tag": "b12x-nvfp4all-fp8draft",
+ "rows": [
+  {
+   "prompt": "prose",
+   "prompt_tokens": 33,
+   "tokens": 512,
+   "steps": 196,
+   "ttft_s": 0.067,
+   "decode_s": 3.056,
+   "step_ms": 15.59,
+   "tok_per_step": 2.612,
+   "tok_s": 167.6,
+   "rep": 0
+  },
+  {
+   "prompt": "prose",
+   "prompt_tokens": 33,
+   "tokens": 512,
+   "steps": 196,
+   "ttft_s": 0.064,
+   "decode_s": 3.045,
+   "step_ms": 15.53,
+   "tok_per_step": 2.612,
+   "tok_s": 168.2,
+   "rep": 1
+  },
+  {
+   "prompt": "code",
+   "prompt_tokens": 50,
+   "tokens": 512,
+   "steps": 93,
+   "ttft_s": 0.078,
+   "decode_s": 1.437,
+   "step_ms": 15.45,
+   "tok_per_step": 5.505,
+   "tok_s": 356.4,
+   "rep": 0
+  },
+  {
+   "prompt": "code",
+   "prompt_tokens": 50,
+   "tokens": 512,
+   "steps": 93,
+   "ttft_s": 0.073,
+   "decode_s": 1.438,
+   "step_ms": 15.46,
+   "tok_per_step": 5.505,
+   "tok_s": 356.2,
+   "rep": 1
+  },
+  {
+   "prompt": "math",
+   "prompt_tokens": 79,
+   "tokens": 512,
+   "steps": 79,
+   "ttft_s": 0.423,
+   "decode_s": 1.23,
+   "step_ms": 15.58,
+   "tok_per_step": 6.481,
+   "tok_s": 416.1,
+   "rep": 0
+  },
+  {
+   "prompt": "math",
+   "prompt_tokens": 79,
+   "tokens": 512,
+   "steps": 88,
+   "ttft_s": 0.522,
+   "decode_s": 1.359,
+   "step_ms": 15.44,
+   "tok_per_step": 5.818,
+   "tok_s": 376.8,
+   "rep": 1
+  },
+  {
+   "prompt": "prose_8k",
+   "prompt_tokens": 9040,
+   "tokens": 512,
+   "steps": 192,
+   "ttft_s": 1.089,
+   "decode_s": 3.051,
+   "step_ms": 15.89,
+   "tok_per_step": 2.667,
+   "tok_s": 167.8,
+   "rep": 0
+  },
+  {
+   "prompt": "prose_8k",
+   "prompt_tokens": 9040,
+   "tokens": 512,
+   "steps": 200,
+   "ttft_s": 0.088,
+   "decode_s": 3.179,
+   "step_ms": 15.9,
+   "tok_per_step": 2.56,
+   "tok_s": 161.0,
+   "rep": 1
+  }
+ ]
+}

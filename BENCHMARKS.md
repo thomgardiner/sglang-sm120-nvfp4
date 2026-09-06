@@ -12,19 +12,32 @@ python3 -m sglang.bench_serving --backend sglang --port 30000 --dataset-name ran
   --num-prompts 10 --max-concurrency 1 --warmup-requests 1 --seed 7
 ```
 
-| config | output tok/s | mean TPOT ms | median TPOT ms | accept | step ms (mean TPOT × accept) |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| cutlass + bf16 draft (stock SGLang) | 173.0 | 4.95 | 3.97 | 4.47 | 22.1 |
-| b12x + bf16 draft | 196.2 | 4.31 | 3.46 | 4.25 | 18.3 |
-| b12x + FP8 draft | 212.4 | 3.89 | 3.08 | 4.77 | 18.6 |
-| b12x + all-NVFP4 target + bf16 draft | 263.9 | 3.12 | 2.92 | 4.36 | 13.6 |
-| b12x + all-NVFP4 target + FP8 draft | 241.5 | 3.46 | 2.82 | 4.11 | 14.2 |
+| config | output tok/s | mean TPOT ms | median TPOT ms | accept |
+| --- | ---: | ---: | ---: | ---: |
+| cutlass + bf16 draft (stock SGLang) | 173.0 | 4.95 | 3.97 | 4.47 |
+| b12x + bf16 draft | 196.2 | 4.31 | 3.46 | 4.25 |
+| b12x + FP8 draft | 212.4 | 3.89 | 3.08 | 4.77 |
+| b12x + all-NVFP4 target + bf16 draft | 263.9 | 3.12 | 2.92 | 4.36 |
+| b12x + all-NVFP4 target + FP8 draft | 241.5 | 3.46 | 2.82 | 4.11 |
 
-Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample. The last column removes accept from the comparison: the backend change cuts the step from 22.1 to 18.3 ms, 17%, and the all-NVFP4 target cuts it again to 13.6 ms, 38% below stock. The FP8 draft rows move with accept on this shape, not with their step.
+Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample, and the accept column is the server log's mean over the run, not a per-request value. Step time is measured directly in the next section; do not derive it from this table. An earlier version of this table printed a step column as mean TPOT × accept (22.1, 18.3, 18.6, 13.6, 14.2 ms). Those accept samples did not belong to those runs, and the 13.6 figure was wrong by 2.7 ms.
 
 Six-prompt runs at the default seed, for reference: stock 153.9 tok/s, median TPOT 5.34, accept 3.92; b12x 172.2, 4.67, 3.89; b12x + FP8 draft 170.7, 5.21, 3.71. The SGLang cookbook reports DFlash2 on a 5090 at 4.92 ms median TPOT and accept 4.29 on this shape, so the stock rows sit where their measurement does.
 
 Raw output: `receipts/bench_*.jsonl`.
+
+## Decode step, measured directly
+
+`bench/step_time.py`: one streamed chat completion at a time, thinking off, greedy, 512 output tokens. SGLang emits one stream chunk per verify step at batch 1, so step time is decode seconds divided by chunks, and tokens per step is completion tokens divided by chunks. SGLang's logged accept length counts `num_correct_drafts + 1` per step, so it is the same quantity. Four prompts, two repeats each, GPU1, 2026-09-06. Raw output: `receipts/step/step-*.json`.
+
+| config | prose | code | math | prose, 9040-token prompt | tok/step (prose, code, math) |
+| --- | ---: | ---: | ---: | ---: | --- |
+| cutlass + RadixArk target + bf16 draft (stock SGLang) | 21.6 ms | 21.4 ms | 21.5 ms | 21.9 ms | 2.71, 5.57, 6.0 |
+| b12x + RadixArk target + bf16 draft | 18.8 ms | 18.7 ms | 18.8 ms | 19.2 ms | 2.71, 5.57, 6.0 |
+| b12x + all-NVFP4 target + bf16 draft | 16.4 ms | 16.2 ms | 16.3 ms | 16.7 ms | 2.56, 5.63, 5.8 |
+| b12x + all-NVFP4 target + FP8 draft | 15.6 ms | 15.5 ms | 15.5 ms | 15.9 ms | 2.61, 5.50, 6.1 |
+
+Step time does not depend on the prompt. Repeats agree within 0.2 ms. The 9040-token prompt adds 0.3 to 0.4 ms. Against stock: b12x −13%, all-NVFP4 target −24%, FP8 draft −28%. Bytes streamed per step and the memory ceiling that bounds these numbers are in [sm120-decode/docs/ledger.md](https://github.com/thomgardiner/sm120-decode/blob/main/docs/ledger.md).
 
 ## Acceptance length on named datasets
 
