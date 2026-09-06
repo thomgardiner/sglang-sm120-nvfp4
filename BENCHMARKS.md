@@ -52,3 +52,18 @@ Token and kept counts are from the bf16 run; the FP8 run kept 75, 162, 82, 88 pr
 Prompts: `bench/stage_datasets.py`. Runner: `bench/dataset_bench.py`. Raw per-prompt rows with output hashes: `receipts/ds_*.jsonl`.
 
 The cutlass backend does not change acceptance; it changes step time only. Its dataset tok/s is the bf16 row scaled by the step ratio from the serving table, about 0.83.
+
+## Accuracy, lm-evaluation-harness
+
+GSM8K test, first 500, zero-shot chat, greedy, `max_gen_toks` 4096, flexible-extract exact match. Both targets served by SGLang with b12x and the bf16 DFlash2 draft. Output in `receipts/lmeval/`.
+
+| target | GSM8K |
+| --- | ---: |
+| RadixArk/Qwen3.8-27B-NVFP4 | 83.0 ± 1.7 |
+| Qwen3.8-27B-NVFP4-all | 85.2 ± 1.6 |
+
+```
+lm_eval --model local-chat-completions \
+  --model_args model=qwen3.8-27b,base_url=http://127.0.0.1:30000/v1/chat/completions,num_concurrent=1,tokenized_requests=False,max_gen_toks=4096 \
+  --tasks gsm8k --num_fewshot 0 --limit 500 --apply_chat_template --gen_kwargs temperature=0
+```
