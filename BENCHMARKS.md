@@ -42,6 +42,29 @@ Step time does not depend on the prompt: the spread across prose, code, and math
 
 The step floor is set by bytes: the all-NVFP4 target streams 16.22 GB of weights and scales per step and the bf16 draft 3.85 GB, and an RTX 5090 reads at 1701 GB/s (measured, 94.9% of the 1792 spec), so the fastest bf16-draft row runs at 72% of the memory ceiling.
 
+## Draft length
+
+`--speculative-num-draft-tokens` defaults to 8 in the SGLang cookbook cells for this model. It is not the best value for every workload. Same measurement as the previous section, four repeats per prompt, all-NVFP4 target with the bf16 draft. Raw output: `receipts/step/step-dt-*.json` and `step-dtc-*.json`.
+
+| draft tokens | prose tok/s | code tok/s | math tok/s | step ms | tok/step (prose, code, math) |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| 4 | 149.9 | 222.8 | 215.4 | 16.3 | 2.45, 3.63, 3.52 |
+| 8 | 156.7 | 346.4 | 353.9 | 16.3 | 2.56, 5.63, 5.76 |
+| 12 | 149.1 | 363.8 | 425.9 | 17.0 | 2.55, 6.17, 7.22 |
+| 16 | 138.3 | 362.7 | 416.0 | 17.7 | 2.46, 6.40, 7.37 |
+
+Going from 8 to 12 costs 0.7 ms of step time, because the verify checks four more tokens against the same weights, and the weights dominate. Whether that pays depends on whether the extra draft tokens are accepted. On math it is worth +20%, on code +5%, and on prose it is a 5% loss because acceptance does not rise at all there. A 9040-token prompt behaves like prose.
+
+The math rows are bimodal, 405 and 446 tok/s on alternating repeats, reproducibly. The two repeats send the same prompt, so the second reuses the prefix cache; the split is stable across separate server starts.
+
+`--speculative-adaptive` changes nothing here. It adjusts `num_steps` from the acceptance rate, and DFlash2 runs with `--speculative-num-steps 1`, so there is nothing for it to adjust. Measured identical to the 8-token rows on all three prompts.
+
+The default in this repo stays 8, which is the best single value for prose and within 5% on code. Serve math or code workloads with 12.
+
+```
+bench/draft_token_sweep.sh
+```
+
 ## Acceptance length on named datasets
 
 Greedy, thinking on, `max_tokens 1024`, one request at a time, chat endpoint. Accept is the mean of the server's per-batch `accept len` over each prompt's decode, then the token-weighted mean across prompts. Throughput is total generated tokens over total decode seconds. The server logs one decode line per 40 steps, so a prompt that finishes in fewer than about 130 generated tokens has no accept sample and is excluded from both columns; the `n` column is the count kept.
