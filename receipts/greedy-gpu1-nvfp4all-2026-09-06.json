@@ -1,0 +1,56 @@
+[
+ {
+  "prompt": "mill",
+  "completion": 1200,
+  "sha": "73d9a66515aa3887",
+  "ttft_s": 0.122,
+  "decode_s": 5.236,
+  "decode_tok_s": 229.2,
+  "rep": 0
+ },
+ {
+  "prompt": "math",
+  "completion": 1200,
+  "sha": "457587585ca64290",
+  "ttft_s": 0.096,
+  "decode_s": 3.998,
+  "decode_tok_s": 300.2,
+  "rep": 0
+ },
+ {
+  "prompt": "code",
+  "completion": 1200,
+  "sha": "2173c86537efec50",
+  "ttft_s": 0.083,
+  "decode_s": 6.328,
+  "decode_tok_s": 189.6,
+  "rep": 0
+ },
+ {
+  "prompt": "mill",
+  "completion": 1200,
+  "sha": "73d9a66515aa3887",
+  "ttft_s": 0.078,
+  "decode_s": 5.243,
+  "decode_tok_s": 228.9,
+  "rep": 1
+ },
+ {
+  "prompt": "math",
+  "completion": 1200,
+  "sha": "457587585ca64290",
+  "ttft_s": 0.078,
+  "decode_s": 4.013,
+  "decode_tok_s": 299.0,
+  "rep": 1
+ },
+ {
+  "prompt": "code",
+  "completion": 1200,
+  "sha": "2173c86537efec50",
+  "ttft_s": 0.078,
+  "decode_s": 6.333,
+  "decode_tok_s": 189.5,
+  "rep": 1
+ }
+]

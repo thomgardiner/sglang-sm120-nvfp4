@@ -1,5 +1,7 @@
 # SGLang NVFP4 on RTX 5090: select FlashInfer's SM120 kernel
 
+Three changes for Qwen3.8-27B decode on an RTX 5090, each measured on its own: a two-line SGLang patch (+15%), an FP8 draft (+4 to 6%), and an all-NVFP4 target (+15%).
+
 SGLang runs NVFP4 linear layers on SM120 (RTX 5090, RTX PRO 6000) through the `flashinfer_cutlass` GEMM. FlashInfer also ships an SM120-specific NVFP4 kernel, `b12x`, and prefers it in its own auto selection, but SGLang has no option that selects it. This patch adds the `flashinfer_b12x` choice and makes SGLang's `auto` pick it on SM120.
 
 Measured on Qwen3.8-27B NVFP4 with DFlash2 speculative decoding, thinking on, one stream, one RTX 5090: **15% more decode tokens per second, same output.**
@@ -60,6 +62,18 @@ On the four standard sets in `BENCHMARKS.md` the FP8 draft is 4 to 6% faster wit
 Point `--speculative-draft-model-path` at the Hugging Face repo and do not pass `--speculative-draft-model-quantization`.
 
 Full tables, cookbook-shape serving numbers, and named-dataset acceptance: [BENCHMARKS.md](BENCHMARKS.md).
+
+## All-NVFP4 target: another 15%
+
+RadixArk's ModelOpt export keeps the 48 linear-attention projections and the 16 attention layers in FP8, 6.7 GB of 20.6. [thomasgardiner/Qwen3.8-27B-NVFP4-all](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all) converts those 208 tensors to NVFP4 from the bf16 source, reusing the export's static activation amax so no calibration run is needed. Checkpoint 18 GB. Same b12x backend, same bf16 draft:
+
+| dataset | FP8-mixed tok/s | all-NVFP4 tok/s | accept | accuracy |
+| --- | ---: | ---: | ---: | --- |
+| MT-Bench | 190.5 | 215.1 | 3.80 → 3.72 | |
+| GSM8K (100) | 264.0 | 309.2 | 5.07 → 5.06 | 87% → 88% |
+| MATH-500 (100) | 261.6 | 303.2 | 5.14 → 5.05 | 62% → 64% |
+
+Step time from GSM8K: 19.2 to 16.4 ms. Accuracy is an answer-tail match at a 1024-token cap, a drift check for both checkpoints, not a leaderboard number. `bench/nvfp4_convert.py` does the conversion; its `check` mode re-quantizes two of the export's own NVFP4 tensors and matches block scales 100% and packed bytes 99.4 to 99.6%.
 
 ## Limits
 
