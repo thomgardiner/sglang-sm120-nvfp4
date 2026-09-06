@@ -1,6 +1,6 @@
-# Qwen3.8-27B on an RTX 5090: three changes, +52% decode
+# Qwen3.8-27B NVFP4 + DFlash2 on an RTX 5090: +52% decode
 
-Three separate changes to SGLang serving of Qwen3.8-27B NVFP4 with DFlash2 speculative decoding, each measured on its own. Stock is 173 tok/s in the SGLang cookbook shape; all three together is 264.
+SGLang cookbook shape (8192 in / 1024 out, concurrency 1): 173 tok/s stock, 264 tok/s with all of the below. Each row was measured on its own.
 
 | change | what | gain |
 | --- | --- | ---: |
@@ -12,7 +12,7 @@ Full tables, commands, and raw logs: [BENCHMARKS.md](BENCHMARKS.md) and [receipt
 
 ## The patch
 
-On SM120 (RTX 5090, RTX PRO 6000) SGLang's `--fp4-gemm-backend auto` resolves to `flashinfer_cutlass`. FlashInfer has a kernel written for SM120, `b12x`, and prefers it in its own auto mode. SGLang has no option that selects it. The patch adds `flashinfer_b12x` and makes `auto` pick it on SM120. Four lines.
+On SM120 (RTX 5090, RTX PRO 6000) SGLang's `--fp4-gemm-backend auto` resolves to `flashinfer_cutlass`. FlashInfer has a kernel written for SM120, `b12x`, and prefers it in its own auto mode. SGLang has no option that selects it. The patch adds `flashinfer_b12x` and makes `auto` pick it on SM120.
 
 Cold GEMM at M=9, percent of HBM bandwidth:
 
@@ -37,8 +37,6 @@ cd sglang && git apply /path/to/b12x.patch
 Against SGLang main `f5819b0`. Needs CUDA 13 and NVFP4; FlashInfer 0.6.18 enables b12x on SM120 and SM121.
 
 ## The two checkpoints
-
-Same idea both times: the decode step at batch 1 is memory bound, so fewer weight bytes means a shorter step.
 
 The target export from RadixArk leaves 6.7 GB of GDN and attention projections in FP8. `bench/nvfp4_convert.py` re-quantizes them to NVFP4 from the bf16 source, reusing the export's activation calibration. GSM8K 87% → 88%, MATH-500 62% → 64%, acceptance within 2%.
 
