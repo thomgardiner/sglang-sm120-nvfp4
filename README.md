@@ -8,7 +8,7 @@ SGLang cookbook shape (8192 in / 1024 out, concurrency 1): 173 tok/s stock, 264 
 | [Qwen3.8-27B-NVFP4-all](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all) | GDN and attention projections in NVFP4 instead of FP8 | +15% |
 | [Qwen3.8-27B-DFlash2-FP8](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) | draft MLP and o_proj in FP8 | +4 to 6% |
 
-Full tables, commands, and raw logs: [BENCHMARKS.md](BENCHMARKS.md) and [receipts/](receipts/).
+Full tables, commands, and raw logs: [BENCHMARKS.md](BENCHMARKS.md) and [receipts/](receipts/). Checkpoints and their bases: [Hugging Face collection](https://huggingface.co/collections/thomasgardiner/qwen38-27b-on-rtx-5090-6a9cd2afdbba0fcd6e11a711).
 
 ## The patch
 
