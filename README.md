@@ -1,97 +1,59 @@
-# SGLang NVFP4 on RTX 5090: select FlashInfer's SM120 kernel
+# Qwen3.8-27B on an RTX 5090: three changes, +52% decode
 
-Three changes for Qwen3.8-27B decode on an RTX 5090, each measured on its own: a two-line SGLang patch (+15%), an FP8 draft (+4 to 6%), and an all-NVFP4 target (+15%).
+Three separate changes to SGLang serving of Qwen3.8-27B NVFP4 with DFlash2 speculative decoding, each measured on its own. Stock is 173 tok/s in the SGLang cookbook shape; all three together is 264.
 
-SGLang runs NVFP4 linear layers on SM120 (RTX 5090, RTX PRO 6000) through the `flashinfer_cutlass` GEMM. FlashInfer also ships an SM120-specific NVFP4 kernel, `b12x`, and prefers it in its own auto selection, but SGLang has no option that selects it. This patch adds the `flashinfer_b12x` choice and makes SGLang's `auto` pick it on SM120.
+| change | what | gain |
+| --- | --- | ---: |
+| [`b12x.patch`](b12x.patch) | SGLang picks FlashInfer's SM120 NVFP4 kernel instead of the CUTLASS one | +15% |
+| [Qwen3.8-27B-NVFP4-all](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all) | GDN and attention projections in NVFP4 instead of FP8 | +15% |
+| [Qwen3.8-27B-DFlash2-FP8](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) | draft MLP and o_proj in FP8 | +4 to 6% |
 
-Measured on Qwen3.8-27B NVFP4 with DFlash2 speculative decoding, thinking on, one stream, one RTX 5090: **15% more decode tokens per second, same output.**
+Full tables, commands, and raw logs: [BENCHMARKS.md](BENCHMARKS.md) and [receipts/](receipts/).
 
-| prompt, greedy, 1200 tokens | cutlass tok/s | b12x tok/s |
+## The patch
+
+On SM120 (RTX 5090, RTX PRO 6000) SGLang's `--fp4-gemm-backend auto` resolves to `flashinfer_cutlass`. FlashInfer has a kernel written for SM120, `b12x`, and prefers it in its own auto mode. SGLang has no option that selects it. The patch adds `flashinfer_b12x` and makes `auto` pick it on SM120. Four lines.
+
+Cold GEMM at M=9, percent of HBM bandwidth:
+
+| shape | cutlass | b12x |
+| --- | ---: | ---: |
+| gate_up 34816×5120 | 63% | 89% |
+| down 5120×17408 | 52% | 78% |
+| lm_head 248320×5120 | 65% | 92% |
+
+Output is bit-identical. Same prompts, greedy, 1200 tokens, same GPU:
+
+| prompt | cutlass | b12x |
 | --- | ---: | ---: |
 | prose | 149.5 | 171.5 |
 | math | 230.1 | 264.6 |
-| Rust code | 191.7 | 220.2 |
-
-The SHA-256 of the generated text is equal across both backends and both repeats. Receipts: `receipts/`.
-
-## Why it is faster
-
-Cold-weight GEMM at M=9, weights rotated through 8 copies to defeat the 128 MB L2, percent of 1.792 TB/s:
-
-| shape | `cutlass` | `b12x` |
-| --- | ---: | ---: |
-| gate_up N=34816 K=5120 | 63% | 89% |
-| down N=5120 K=17408 | 52% | 78% |
-| lm_head N=248320 K=5120 | 65% | 92% |
-
-In the live decode step the NVFP4 GEMMs took 10.5 ms of 23.4 ms. With b12x they take 7.6 ms. Scripts: `bench/gemm_cold.py`, `bench/fp4_auto.py`.
-
-## Apply
+| code | 191.7 | 220.2 |
 
 ```
-cd sglang
-git apply /path/to/b12x.patch
+cd sglang && git apply /path/to/b12x.patch
 ```
 
-Then start the server as before. `--fp4-gemm-backend auto` now selects b12x on SM120. You can also pass `--fp4-gemm-backend flashinfer_b12x`.
+Against SGLang main `f5819b0`. Needs CUDA 13 and NVFP4; FlashInfer 0.6.18 enables b12x on SM120 and SM121.
 
-The patch is against SGLang `main` at `77aee202` (2026-09-05). The measurements used the image `lmsysorg/sglang@sha256:616a3e97f45191af975896cfa644279096cb31bd408a071c2e99ca7209c3cafe`, where the same two-line change applies.
+## The two checkpoints
 
-## FP8 draft: a second 4 to 6%
+Same idea both times: the decode step at batch 1 is memory bound, so fewer weight bytes means a shorter step.
 
-The DFlash2 draft reads 3.85 GB of bf16 weights per step. [thomasgardiner/Qwen3.8-27B-DFlash2-FP8](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) stores the draft's MLP and o_proj tensors in FP8 with one scale per tensor and leaves q, k, v in bf16 so SGLang keeps its fused DFlash KV path. Step time from the server log on the same greedy prompts, on top of b12x:
+The target export from RadixArk leaves 6.7 GB of GDN and attention projections in FP8. `bench/nvfp4_convert.py` re-quantizes them to NVFP4 from the bf16 source, reusing the export's activation calibration. GSM8K 87% → 88%, MATH-500 62% → 64%, acceptance within 2%.
 
-| draft | mean accept | step (ms) |
-| --- | ---: | ---: |
-| bf16 | 4.01 | 19.10 |
-| FP8 per-channel | 3.87 | 19.37 |
-| FP8 per-tensor | 3.99 | 18.31 |
-
-Per-channel scales route to a CUTLASS FP8 GEMM at 25 to 60% of bandwidth on SM120. A per-tensor scale routes to cuBLAS at 86%. Quantizing q, k, v turns the fused KV path off and is slower.
-
-The shorter step is not the whole story. Five prompts per category, greedy, 1200 tokens, mean tok/s and mean accept (`receipts/probe-*.json`):
-
-| category | bf16 draft | FP8 draft | bf16 accept | FP8 accept |
-| --- | ---: | ---: | ---: | ---: |
-| prose | 151.6 | 174.2 | 2.83 | 2.92 |
-| math | 287.5 | 300.3 | 5.40 | 5.54 |
-| code | 204.2 | 196.2 | 3.84 | 3.52 |
-
-On the four standard sets in `BENCHMARKS.md` the FP8 draft is 4 to 6% faster with accept within 1.3% of bf16, HumanEval included. On a five-prompt probe of hand-written code tasks it accepted 8% fewer tokens and was 4% slower, so on code the gain is small and can flip on a given prompt. `bench/quant_draft.py` builds the checkpoint.
-
-Point `--speculative-draft-model-path` at the Hugging Face repo and do not pass `--speculative-draft-model-quantization`.
-
-Full tables, cookbook-shape serving numbers, and named-dataset acceptance: [BENCHMARKS.md](BENCHMARKS.md).
-
-## All-NVFP4 target: another 15%
-
-RadixArk's ModelOpt export keeps the 48 linear-attention projections and the 16 attention layers in FP8, 6.7 GB of 20.6. [thomasgardiner/Qwen3.8-27B-NVFP4-all](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all) converts those 208 tensors to NVFP4 from the bf16 source, reusing the export's static activation amax so no calibration run is needed. Checkpoint 18 GB. Same b12x backend, same bf16 draft:
-
-| dataset | FP8-mixed tok/s | all-NVFP4 tok/s | accept | accuracy |
-| --- | ---: | ---: | ---: | --- |
-| MT-Bench | 190.5 | 215.1 | 3.80 → 3.72 | |
-| GSM8K (100) | 264.0 | 309.2 | 5.07 → 5.06 | 87% → 88% |
-| MATH-500 (100) | 261.6 | 303.2 | 5.14 → 5.05 | 62% → 64% |
-
-Step time from GSM8K: 19.2 to 16.4 ms. Accuracy is an answer-tail match at a 1024-token cap, a drift check for both checkpoints, not a leaderboard number. `bench/nvfp4_convert.py` does the conversion; its `check` mode re-quantizes two of the export's own NVFP4 tensors and matches block scales 100% and packed bytes 99.4 to 99.6%.
-
-## Limits
-
-FlashInfer's b12x requires CUDA 13 or later and NVFP4 with the 128x4 scale layout. It does not cover MXFP4. FlashInfer excludes SM121 (GB10, DGX Spark) from b12x on purpose, so this patch changes nothing there.
+The DFlash2 draft is 3.85 GB of bf16. `bench/quant_draft.py` puts its MLP and o_proj in FP8 and leaves q/k/v alone so SGLang's fused KV path stays on. Acceptance within 1.3% on MT-Bench, HumanEval, GSM8K, MATH-500.
 
 ## Reproduce
 
-Server flags used: `--speculative-algorithm DFLASH --speculative-draft-model-path incoai/Qwen3.8-27B-DFlash2 --speculative-num-draft-tokens 8 --max-running-requests 1 --cuda-graph-max-bs-decode 1 --mem-fraction-static 0.91 --attention-backend flashinfer`, target checkpoint Qwen3.8-27B NVFP4 (ModelOpt export).
-
 ```
-export SGLANG_API_KEY=...     # omit if the server has no key
-python3 bench/greedy_fixed.py 30000 out.json
+export SGLANG_API_KEY=...
+python3 bench/greedy_fixed.py 30000 out.json           # fixed prompts, tok/s and output hash
+python3 bench/stage_datasets.py                        # MT-Bench, HumanEval, GSM8K, MATH-500 prompts
+python3 bench/dataset_bench.py 30000 <container> gsm8k out.jsonl
+python3 bench/grade.py gsm8k out.jsonl
+python3 -m sglang.bench_serving --backend sglang --dataset-name random \
+  --random-input-len 8192 --random-output-len 1024 --num-prompts 10 --max-concurrency 1 --seed 7
 ```
 
-Run once with `--fp4-gemm-backend flashinfer_cutlass` and once with `flashinfer_b12x`. Compare `decode_tok_s` and `sha` in the two files.
-
-To see the per-kernel step budget: `bench/profile_step.sh <port> <container>` records 40 scheduler steps with SGLang's built-in profiler, then `bench/trace_steps.py <trace.json.gz>` prints kernel time per decode step.
-
-## License
-
-Apache-2.0, the same license as SGLang.
+Apache-2.0.
