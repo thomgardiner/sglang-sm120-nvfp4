@@ -34,7 +34,7 @@ Output is bit-identical. Same prompts, greedy, 1200 tokens, same GPU:
 cd sglang && git apply /path/to/b12x.patch
 ```
 
-Against SGLang main `f5819b0`. Needs CUDA 13 and NVFP4; FlashInfer 0.6.18 enables b12x on SM120 and SM121.
+Upstream: [sgl-project/sglang#38170](https://github.com/sgl-project/sglang/pull/38170). Needs CUDA 13 and NVFP4; FlashInfer 0.6.18 enables b12x on SM120 and SM121.
 
 ## The two checkpoints
 
