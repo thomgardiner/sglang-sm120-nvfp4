@@ -20,24 +20,27 @@ python3 -m sglang.bench_serving --backend sglang --port 30000 --dataset-name ran
 | b12x + all-NVFP4 target + bf16 draft | 263.9 | 3.12 | 2.92 | 4.36 |
 | b12x + all-NVFP4 target + FP8 draft | 241.5 | 3.46 | 2.82 | 4.11 |
 
-Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample, and the accept column is the server log's mean over the run, not a per-request value. Step time is measured directly in the next section; do not derive it from this table. An earlier version of this table printed a step column as mean TPOT × accept (22.1, 18.3, 18.6, 13.6, 14.2 ms). Those accept samples did not belong to those runs, and the 13.6 figure was wrong by 2.7 ms.
+Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample, and the accept column is the server log's mean over the run, not a per-request value. Step time and per-prompt tok/s are measured directly in the next section; do not derive step time from this table. An earlier version of this table printed a step column as mean TPOT × accept (22.1, 18.3, 18.6, 13.6, 14.2 ms). Those accept samples did not belong to those runs, and the 13.6 figure was wrong by 2.7 ms.
 
 Six-prompt runs at the default seed, for reference: stock 153.9 tok/s, median TPOT 5.34, accept 3.92; b12x 172.2, 4.67, 3.89; b12x + FP8 draft 170.7, 5.21, 3.71. The SGLang cookbook reports DFlash2 on a 5090 at 4.92 ms median TPOT and accept 4.29 on this shape, so the stock rows sit where their measurement does.
 
 Raw output: `receipts/bench_*.jsonl`.
 
-## Decode step, measured directly
+## Decode step and tok/s, measured directly
 
-`bench/step_time.py`: one streamed chat completion at a time, thinking off, greedy, 512 output tokens. SGLang emits one stream chunk per verify step at batch 1, so step time is decode seconds divided by chunks, and tokens per step is completion tokens divided by chunks. SGLang's logged accept length counts `num_correct_drafts + 1` per step, so it is the same quantity. Four prompts, two repeats each, GPU1, 2026-09-06. Raw output: `receipts/step/step-*.json`.
+`bench/step_time.py`: one streamed chat completion at a time, thinking off, greedy, 512 output tokens. SGLang emits one stream chunk per verify step at batch 1, so step time is decode seconds divided by chunks, tokens per step is completion tokens divided by chunks, and tok/s is completion tokens over decode seconds. SGLang's logged accept length counts `num_correct_drafts + 1` per step, so it is the same quantity as tokens per step. Three prompts plus a 9040-token prose prompt, two repeats each, means shown. GPU1, 2026-09-06. Raw output: `receipts/step/step-*.json`.
 
-| config | prose | code | math | prose, 9040-token prompt | tok/step (prose, code, math) |
+| config | prose tok/s | code tok/s | math tok/s | step ms | tok/step (prose, code, math) |
 | --- | ---: | ---: | ---: | ---: | --- |
-| cutlass + RadixArk target + bf16 draft (stock SGLang) | 21.6 ms | 21.4 ms | 21.5 ms | 21.9 ms | 2.71, 5.57, 6.0 |
-| b12x + RadixArk target + bf16 draft | 18.8 ms | 18.7 ms | 18.8 ms | 19.2 ms | 2.71, 5.57, 6.0 |
-| b12x + all-NVFP4 target + bf16 draft | 16.4 ms | 16.2 ms | 16.3 ms | 16.7 ms | 2.56, 5.63, 5.8 |
-| b12x + all-NVFP4 target + FP8 draft | 15.6 ms | 15.5 ms | 15.5 ms | 15.9 ms | 2.61, 5.50, 6.1 |
+| cutlass + RadixArk target + bf16 draft (stock SGLang) | 125.5 | 259.6 | 279.8 | 21.5 | 2.71, 5.57, 6.02 |
+| b12x + RadixArk target + bf16 draft | 143.8 | 297.7 | 321.1 | 18.8 | 2.71, 5.57, 6.02 |
+| b12x + RadixArk target + FP8 draft | 144.3 | 332.6 | 316.2 | 18.0 | 2.60, 5.95, 5.69 |
+| b12x + all-NVFP4 target + bf16 draft | 156.3 | 346.4 | 353.1 | 16.3 | 2.56, 5.63, 5.76 |
+| b12x + all-NVFP4 target + FP8 draft | 167.9 | 356.3 | 396.5 | 15.5 | 2.61, 5.50, 6.15 |
 
-Step time does not depend on the prompt. Repeats agree within 0.2 ms. The 9040-token prompt adds 0.3 to 0.4 ms. Against stock: b12x −13%, all-NVFP4 target −24%, FP8 draft −28%. Bytes streamed per step and the memory ceiling that bounds these numbers are in [sm120-decode/docs/ledger.md](https://github.com/thomgardiner/sm120-decode/blob/main/docs/ledger.md).
+Step time does not depend on the prompt: the spread across prose, code, and math is under 0.2 ms, and repeats agree within 0.2 ms. The 9040-token prompt adds 0.3 to 0.4 ms. The b12x backend and the all-NVFP4 target change step time only; tokens per step is identical between the first two rows because the GEMM outputs are bit-identical. The FP8 draft changes the draft's numerics, so tokens per step moves with it, up on code and down on math here, and the tok/s change ranges from 0% to +12% across the three prompts on the RadixArk target.
+
+The step floor is set by bytes: the all-NVFP4 target streams 16.22 GB of weights and scales per step and the bf16 draft 3.85 GB, and an RTX 5090 reads at 1701 GB/s (measured, 94.9% of the 1792 spec), so the fastest bf16-draft row runs at 72% of the memory ceiling.
 
 ## Acceptance length on named datasets
 
@@ -64,7 +67,7 @@ Token and kept counts are from the bf16 run; the FP8 run kept 75, 162, 82, 88 pr
 
 Prompts: `bench/stage_datasets.py`. Runner: `bench/dataset_bench.py`. Raw per-prompt rows with output hashes: `receipts/ds_*.jsonl`.
 
-The cutlass backend does not change acceptance; it changes step time only. Its dataset tok/s is the bf16 row scaled by the step ratio from the serving table, about 0.83.
+The cutlass backend does not change acceptance; it changes step time only. Its dataset tok/s is the bf16 row scaled by the step ratio 18.8 / 21.5 from the direct measurement, about 0.87.
 
 ## Accuracy, lm-evaluation-harness
 
