@@ -17,8 +17,10 @@ python3 -m sglang.bench_serving --backend sglang --port 30000 --dataset-name ran
 | cutlass + bf16 draft (stock SGLang) | 173.0 | 4.95 | 3.97 | 4.47 | 22.1 |
 | b12x + bf16 draft | 196.2 | 4.31 | 3.46 | 4.25 | 18.3 |
 | b12x + FP8 draft | 212.4 | 3.89 | 3.08 | 4.77 | 18.6 |
+| b12x + all-NVFP4 target + bf16 draft | 263.9 | 3.12 | 2.92 | 4.36 | 13.6 |
+| b12x + all-NVFP4 target + FP8 draft | 241.5 | 3.46 | 2.82 | 4.11 | 14.2 |
 
-Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample. The last column removes accept from the comparison: the backend change cuts the step from 22.1 to 18.3 ms, 17%. The FP8 draft row's higher tok/s here comes from a higher accept on that run, not from its step.
+Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample. The last column removes accept from the comparison: the backend change cuts the step from 22.1 to 18.3 ms, 17%, and the all-NVFP4 target cuts it again to 13.6 ms, 38% below stock. The FP8 draft rows move with accept on this shape, not with their step.
 
 Six-prompt runs at the default seed, for reference: stock 153.9 tok/s, median TPOT 5.34, accept 3.92; b12x 172.2, 4.67, 3.89; b12x + FP8 draft 170.7, 5.21, 3.71. The SGLang cookbook reports DFlash2 on a 5090 at 4.92 ms median TPOT and accept 4.29 on this shape, so the stock rows sit where their measurement does.
 
@@ -34,6 +36,16 @@ Greedy, thinking on, `max_tokens 1024`, one request at a time, chat endpoint. Ac
 | HumanEval | 164 | 164 | 116,519 | 239.2 | 4.64 | 248.8 | 4.58 |
 | GSM8K (test, first 100) | 100 | 83 | 29,751 | 264.0 | 5.07 | 277.0 | 5.02 |
 | MATH-500 (first 100) | 100 | 88 | 49,405 | 261.6 | 5.14 | 272.4 | 5.08 |
+
+Same sets with the all-NVFP4 target ([thomasgardiner/Qwen3.8-27B-NVFP4-all](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all)), b12x:
+
+| dataset | bf16 draft tok/s | accept | accuracy | FP8 draft tok/s | accept | accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| MT-Bench (first turn) | 215.1 | 3.72 | | 232.1 | 3.78 | |
+| GSM8K (test, first 100) | 309.2 | 5.06 | 88% | 317.0 | 4.95 | 84% |
+| MATH-500 (first 100) | 303.2 | 5.05 | 64% | | | |
+
+Accuracy is `bench/grade.py`, an answer-tail match against the reference at a 1024-token cap: GSM8K read 87% and 90% with the two drafts on the FP8-mixed target and 88% and 84% here, so the spread of one hundred graded items is about ±3 points. It is a drift check, not a leaderboard. The default we serve is the all-NVFP4 target with the bf16 draft.
 
 Token and kept counts are from the bf16 run; the FP8 run kept 75, 162, 82, 88 prompts. Across the four sets the FP8 draft changes accept by +0.8%, −1.3%, −1.0%, −1.2% and tok/s by +5.8%, +4.0%, +4.9%, +4.1%. An earlier five-prompt probe on hand-written code tasks showed an 8% accept drop; 164 HumanEval prompts put it at 1.3%. The larger sample is the one to trust.
 
