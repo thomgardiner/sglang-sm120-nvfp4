@@ -69,7 +69,19 @@ The math rows are bimodal, 405 and 446 tok/s on alternating repeats, reproducibl
 
 `--speculative-adaptive` changes nothing here. It adjusts `num_steps` from the acceptance rate, and DFlash2 runs with `--speculative-num-steps 1`, so there is nothing for it to adjust. Measured identical to the 8-token rows on all three prompts.
 
-The default in this repo stays 8, which is the best single value for prose and within 5% on code. Serve math or code workloads with 12.
+Same sweep with the FP8 draft (`receipts/step/step-best-fp8-dt*.json`), n=2:
+
+| draft tokens | prose tok/s | code tok/s | math tok/s | step ms | tok/step (prose, code, math) |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| 8 | 168.1 | 355.9 | 396.0 | 15.5 | 2.61, 5.51, 6.15 |
+| 12 | 157.1 | 396.1 | 438.6 | 16.2 | 2.56, 6.40, 7.11 |
+| 16 | 143.8 | 389.1 | 445.9 | 16.9 | 2.45, 6.56, 7.54 |
+
+k=12 is the code/math recipe: 396 and 439 tok/s. Prose falls back to the shipping number. k=16 is not better on code.
+
+DSpark, same all-NVFP4 target and b12x, k=8, GPU1, 2026-09-07 (`receipts/step/probe-dspark-gpu1.json`): prose 127.7 tok/s at 2.12 tok/step, code 274.4, math 288–298. Worse than DFlash2 on every prompt. Step time 16.5 ms, so it lost acceptance, not bandwidth.
+
+The default in this repo stays DFlash2 at 8, which is the best single value for prose. Serve math or code with the FP8 draft and 12.
 
 ```
 bench/draft_token_sweep.sh

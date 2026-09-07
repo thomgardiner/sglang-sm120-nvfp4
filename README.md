@@ -9,7 +9,17 @@ Shipping config on this card: FlashInfer `b12x`, [all-NVFP4 target](https://hugg
 | math | 280 tok/s | 353 tok/s | +26% |
 | prose, 9k context | 118 tok/s | 150 tok/s | +28% |
 
-Decode step 21.6 → 16.4 ms, a 24% shorter step, independent of the prompt. Adding the [FP8 draft](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) on top of shipping is 168 / 356 / 397 tok/s (+34% / +37% / +42% over stock) and 15.6 ms per step. That increment moves acceptance, so it is prompt-dependent.
+Decode step 21.6 → 16.4 ms, a 24% shorter step, independent of the prompt. Adding the [FP8 draft](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) at 8 tokens is 168 / 356 / 397 tok/s and 15.6 ms per step. That increment moves acceptance, so it is prompt-dependent.
+
+For code and math, raise `--speculative-num-draft-tokens` to 12 on that FP8 draft. Same GPU, greedy, thinking off, n=2 (`receipts/step/step-best-fp8-dt12.json`):
+
+| prompt | shipping (bf16, k=8) | FP8 draft, k=12 | vs stock |
+| --- | ---: | ---: | ---: |
+| prose | 157 tok/s | 157 tok/s | +26% |
+| code | 346 tok/s | 396 tok/s | +53% |
+| math | 353 tok/s | 439 tok/s | +57% |
+
+Prose does not gain. Do not use k=12 as a default. DSpark on this target is slower (128 / 274 / 293 tok/s, tok/step 2.12 on prose).
 
 Each change on its own, same three prompts. Stock, shipping, and FP8-draft endpoints are the interleaved means above. The two middle rows are an earlier sequential run (n=2) that matches those endpoints:
 

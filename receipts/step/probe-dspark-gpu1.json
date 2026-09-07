@@ -1,0 +1,77 @@
+{
+ "tag": "dspark-gpu1",
+ "rows": [
+  {
+   "prompt": "prose",
+   "prompt_tokens": 33,
+   "tokens": 512,
+   "steps": 242,
+   "ttft_s": 0.063,
+   "decode_s": 4.011,
+   "step_ms": 16.57,
+   "tok_per_step": 2.116,
+   "tok_s": 127.7,
+   "rep": 0
+  },
+  {
+   "prompt": "prose",
+   "prompt_tokens": 33,
+   "tokens": 512,
+   "steps": 242,
+   "ttft_s": 0.073,
+   "decode_s": 4.012,
+   "step_ms": 16.58,
+   "tok_per_step": 2.116,
+   "tok_s": 127.6,
+   "rep": 1
+  },
+  {
+   "prompt": "code",
+   "prompt_tokens": 50,
+   "tokens": 512,
+   "steps": 113,
+   "ttft_s": 0.077,
+   "decode_s": 1.866,
+   "step_ms": 16.51,
+   "tok_per_step": 4.531,
+   "tok_s": 274.4,
+   "rep": 0
+  },
+  {
+   "prompt": "code",
+   "prompt_tokens": 50,
+   "tokens": 512,
+   "steps": 113,
+   "ttft_s": 0.073,
+   "decode_s": 1.866,
+   "step_ms": 16.51,
+   "tok_per_step": 4.531,
+   "tok_s": 274.4,
+   "rep": 1
+  },
+  {
+   "prompt": "math",
+   "prompt_tokens": 79,
+   "tokens": 512,
+   "steps": 107,
+   "ttft_s": 0.421,
+   "decode_s": 1.778,
+   "step_ms": 16.62,
+   "tok_per_step": 4.785,
+   "tok_s": 288.0,
+   "rep": 0
+  },
+  {
+   "prompt": "math",
+   "prompt_tokens": 79,
+   "tokens": 512,
+   "steps": 104,
+   "ttft_s": 0.404,
+   "decode_s": 1.716,
+   "step_ms": 16.5,
+   "tok_per_step": 4.923,
+   "tok_s": 298.4,
+   "rep": 1
+  }
+ ]
+}

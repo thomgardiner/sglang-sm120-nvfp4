@@ -1,0 +1,77 @@
+{
+ "tag": "ship-gpu1",
+ "rows": [
+  {
+   "prompt": "prose",
+   "prompt_tokens": 33,
+   "tokens": 512,
+   "steps": 200,
+   "ttft_s": 0.064,
+   "decode_s": 3.265,
+   "step_ms": 16.32,
+   "tok_per_step": 2.56,
+   "tok_s": 156.8,
+   "rep": 0
+  },
+  {
+   "prompt": "prose",
+   "prompt_tokens": 33,
+   "tokens": 512,
+   "steps": 200,
+   "ttft_s": 0.072,
+   "decode_s": 3.265,
+   "step_ms": 16.32,
+   "tok_per_step": 2.56,
+   "tok_s": 156.8,
+   "rep": 1
+  },
+  {
+   "prompt": "code",
+   "prompt_tokens": 50,
+   "tokens": 512,
+   "steps": 91,
+   "ttft_s": 0.077,
+   "decode_s": 1.477,
+   "step_ms": 16.23,
+   "tok_per_step": 5.626,
+   "tok_s": 346.6,
+   "rep": 0
+  },
+  {
+   "prompt": "code",
+   "prompt_tokens": 50,
+   "tokens": 512,
+   "steps": 91,
+   "ttft_s": 0.072,
+   "decode_s": 1.478,
+   "step_ms": 16.24,
+   "tok_per_step": 5.626,
+   "tok_s": 346.5,
+   "rep": 1
+  },
+  {
+   "prompt": "math",
+   "prompt_tokens": 79,
+   "tokens": 512,
+   "steps": 86,
+   "ttft_s": 0.425,
+   "decode_s": 1.408,
+   "step_ms": 16.37,
+   "tok_per_step": 5.953,
+   "tok_s": 363.8,
+   "rep": 0
+  },
+  {
+   "prompt": "math",
+   "prompt_tokens": 79,
+   "tokens": 512,
+   "steps": 92,
+   "ttft_s": 0.399,
+   "decode_s": 1.494,
+   "step_ms": 16.24,
+   "tok_per_step": 5.565,
+   "tok_s": 342.7,
+   "rep": 1
+  }
+ ]
+}
