@@ -1,23 +1,28 @@
-# Qwen3.8-27B NVFP4 + DFlash2 on an RTX 5090: +52% tok/s
+# Qwen3.8-27B NVFP4 + DFlash2 on an RTX 5090: +25 to +33% tok/s
 
-Stock SGLang serves this model at 173 tok/s on the SGLang cookbook shape (8192 in, 1024 out, one request). With the three changes below it serves 264 tok/s. Same prompts, same GPU, greedy, thinking off:
+Shipping config on this card: FlashInfer `b12x`, [all-NVFP4 target](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all), bf16 DFlash2 draft, 8 draft tokens. Versus stock SGLang (CUTLASS NVFP4, RadixArk target, same draft) on the same GPU, greedy, thinking off, three rounds interleaved, n=6 per cell:
 
-| prompt | stock SGLang | with all three | change |
+| prompt | stock SGLang | shipping | change |
 | --- | ---: | ---: | ---: |
-| prose | 125 tok/s | 168 tok/s | +34% |
-| code | 260 tok/s | 356 tok/s | +37% |
-| math | 280 tok/s | 397 tok/s | +42% |
+| prose | 125 tok/s | 157 tok/s | +25% |
+| code | 259 tok/s | 346 tok/s | +33% |
+| math | 280 tok/s | 353 tok/s | +26% |
+| prose, 9k context | 118 tok/s | 150 tok/s | +28% |
 
-Each change measured on its own, tok/s on the same three prompts, in the order they stack:
+Decode step 21.6 → 16.4 ms, a 24% shorter step, independent of the prompt. Adding the [FP8 draft](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) on top of shipping is 168 / 356 / 397 tok/s (+34% / +37% / +42% over stock) and 15.6 ms per step. That increment moves acceptance, so it is prompt-dependent.
 
-| change | what | prose | code | math |
-| --- | --- | ---: | ---: | ---: |
-| stock SGLang, RadixArk export, bf16 draft | | 125 | 260 | 280 |
-| [`b12x.patch`](b12x.patch) | SGLang picks FlashInfer's SM120 NVFP4 kernel instead of the CUTLASS one | 144 | 298 | 321 |
-| [Qwen3.8-27B-NVFP4-all](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all) | GDN and attention projections in NVFP4 instead of FP8 | 156 | 346 | 353 |
-| [Qwen3.8-27B-DFlash2-FP8](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) | draft MLP and o_proj in FP8 | 168 | 356 | 397 |
+Each change on its own, same three prompts. Stock, shipping, and FP8-draft endpoints are the interleaved means above. The two middle rows are an earlier sequential run (n=2) that matches those endpoints:
 
-The first two changes shorten the decode step, 21.5 → 18.8 → 16.3 ms, and leave acceptance alone. The FP8 draft shortens it to 15.5 ms and moves acceptance by a few percent either way, so its tok/s gain depends on the prompt. Full tables, commands, and raw logs: [BENCHMARKS.md](BENCHMARKS.md) and [receipts/](receipts/). Checkpoints and their bases: [Hugging Face collection](https://huggingface.co/collections/thomasgardiner/qwen38-27b-on-rtx-5090-6a9cd2afdbba0fcd6e11a711).
+| change | what | prose | code | math | step |
+| --- | --- | ---: | ---: | ---: | ---: |
+| stock SGLang, RadixArk export, bf16 draft | | 125 | 259 | 280 | 21.6 ms |
+| [`b12x.patch`](b12x.patch) | SGLang picks FlashInfer's SM120 NVFP4 kernel instead of CUTLASS | 144 | 298 | 321 | 18.8 ms |
+| [Qwen3.8-27B-NVFP4-all](https://huggingface.co/thomasgardiner/Qwen3.8-27B-NVFP4-all) | GDN and attention projections in NVFP4 instead of FP8 | 157 | 346 | 353 | 16.4 ms |
+| [Qwen3.8-27B-DFlash2-FP8](https://huggingface.co/thomasgardiner/Qwen3.8-27B-DFlash2-FP8) | draft MLP and o_proj in FP8 | 168 | 356 | 397 | 15.6 ms |
+
+The first two changes leave acceptance alone. The FP8 draft does not. Full tables, commands, and raw logs: [BENCHMARKS.md](BENCHMARKS.md) and [receipts/](receipts/). Checkpoints: [Hugging Face collection](https://huggingface.co/collections/thomasgardiner/qwen38-27b-on-rtx-5090-6a9cd2afdbba0fcd6e11a711).
+
+One `bench_serving` run on random-token prompts (cookbook shape, seed 7) read 173 → 264 tok/s on the shipping config. That is a different measurement from the table, and acceptance moved. Do not quote it. The row is labelled in BENCHMARKS.md.
 
 ## The patch
 

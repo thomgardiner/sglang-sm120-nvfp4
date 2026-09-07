@@ -20,7 +20,7 @@ python3 -m sglang.bench_serving --backend sglang --port 30000 --dataset-name ran
 | b12x + all-NVFP4 target + bf16 draft | 263.9 | 3.12 | 2.92 | 4.36 |
 | b12x + all-NVFP4 target + FP8 draft | 241.5 | 3.46 | 2.82 | 4.11 |
 
-Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample, and the accept column is the server log's mean over the run, not a per-request value. Step time and per-prompt tok/s are measured directly in the next section; do not derive step time from this table. An earlier version of this table printed a step column as mean TPOT × accept (22.1, 18.3, 18.6, 13.6, 14.2 ms). Those accept samples did not belong to those runs, and the 13.6 figure was wrong by 2.7 ms.
+Accept moves between runs of this shape even at a fixed seed (the bf16 draft is the same weights in rows 1 and 2, and the GEMM outputs are bit-identical, yet accept reads 4.47 and 4.25). Ten random-token prompts are a small sample, and the accept column is the server log's mean over the run, not a per-request value. Do not quote 263.9 tok/s as +52% over 173.0: those two rows are one seed of random tokens, and the 264 run is the shipping config (all-NVFP4, bf16 draft), not the "all three" config in the README stacking table. Step time and per-prompt tok/s are measured directly in the next section; do not derive step time from this table. An earlier version of this table printed a step column as mean TPOT × accept (22.1, 18.3, 18.6, 13.6, 14.2 ms). Those accept samples did not belong to those runs, and the 13.6 figure was wrong by 2.7 ms.
 
 Six-prompt runs at the default seed, for reference: stock 153.9 tok/s, median TPOT 5.34, accept 3.92; b12x 172.2, 4.67, 3.89; b12x + FP8 draft 170.7, 5.21, 3.71. The SGLang cookbook reports DFlash2 on a 5090 at 4.92 ms median TPOT and accept 4.29 on this shape, so the stock rows sit where their measurement does.
 
@@ -41,6 +41,16 @@ Raw output: `receipts/bench_*.jsonl`.
 Step time does not depend on the prompt: the spread across prose, code, and math is under 0.2 ms, and repeats agree within 0.2 ms. The 9040-token prompt adds 0.3 to 0.4 ms. The b12x backend and the all-NVFP4 target change step time only; tokens per step is identical between the first two rows because the GEMM outputs are bit-identical. The FP8 draft changes the draft's numerics, so tokens per step moves with it, up on code and down on math here, and the tok/s change ranges from 0% to +12% across the three prompts on the RadixArk target.
 
 The step floor is set by bytes: the all-NVFP4 target streams 16.22 GB of weights and scales per step and the bf16 draft 3.85 GB, and an RTX 5090 reads at 1701 GB/s (measured, 94.9% of the 1792 spec), so the fastest bf16-draft row runs at 72% of the memory ceiling.
+
+The same three arms, interleaved, three rounds, one session, n=6 per cell (mean and half-spread). GPU1 idle neighbor at 34 W. Receipts: `receipts/step/step-il-*.json`.
+
+| arm | prose | code | math | prose 9k | step |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| stock SGLang | 125.3 ± 0.5 | 259.5 ± 0.1 | 279.8 ± 2.1 | 117.6 ± 6.9 | 21.62 ms |
+| shipping (b12x + all-NVFP4 + bf16 draft) | 156.6 ± 0.4 | 346.4 ± 0.2 | 353.2 ± 10.7 | 150.3 ± 1.5 | 16.40 ms |
+| best (+ FP8 draft) | 168.1 ± 0.4 | 356.4 ± 0.2 | 396.6 ± 19.8 | 164.5 ± 3.5 | 15.60 ms |
+
+Shipping over stock: +24.9%, +33.5%, +26.2%, +27.9%. Best over stock: +34.1%, +37.4%, +41.7%, +39.9%. The sequential n=2 table above agrees with these endpoints within 0.3 tok/s. The README lead table is this shipping column, rounded.
 
 ## Draft length
 
@@ -90,7 +100,7 @@ Token and kept counts are from the bf16 run; the FP8 run kept 75, 162, 82, 88 pr
 
 Prompts: `bench/stage_datasets.py`. Runner: `bench/dataset_bench.py`. Raw per-prompt rows with output hashes: `receipts/ds_*.jsonl`.
 
-The cutlass backend does not change acceptance; it changes step time only. Its dataset tok/s is the bf16 row scaled by the step ratio 18.8 / 21.5 from the direct measurement, about 0.87.
+The cutlass backend does not change acceptance; it changes step time only. Stock CUTLASS was not run on these named datasets. Do not scale the b12x rows by 18.8/21.5 and publish that as a measurement.
 
 ## Accuracy, lm-evaluation-harness
 
